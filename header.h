@@ -30,7 +30,6 @@ class serverMember
     string uuid;
     int socketNum;
 };
-    
 class serverManager
 {
     public:
