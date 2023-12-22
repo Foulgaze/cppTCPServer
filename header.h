@@ -13,7 +13,7 @@
 #include <optional>
 
 #define BUFFSIZE 4096
-
+#define LISTENING_PORT     54000
 using namespace std;
 
 
@@ -30,6 +30,12 @@ class serverMember
     string uuid;
     int socketNum;
 };
+
+typedef struct priorMessage
+{
+    byte* messageBytes;
+    int messageLength;
+}priorMessage;
 class serverManager
 {
     public:

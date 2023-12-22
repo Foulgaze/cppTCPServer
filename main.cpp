@@ -1,8 +1,8 @@
 #include "header.h"
 
+// vector<priorMessage> messageLog;
+vector<string> messageLog;
 
-/*
-*/
 
 string getMessageSize(string message)
 {
@@ -37,6 +37,7 @@ void send_message(string uuid, string opCode, string message,auto& clientList, i
     cout << "Sending [" << retMessage << "]" << endl;
     byte retMsg[retMessage.length()];
     memcpy(retMsg, retMessage.data(), retMessage.length());
+    messageLog.push_back(retMessage);
     for(int i = 0; i < clientList.size(); ++i)
     {
         if(clientList[i]->socketNum != socket)
@@ -49,7 +50,7 @@ void send_message(string uuid, string opCode, string message,auto& clientList, i
 void parseCommand(serverManager &serverManager, string msg, int clientSocket)
 {
     auto clientList = serverManager.connectList;
-     // Recieved Message Format is [UUID|Server Op Code|Client Op Code|Message] UUID is 32 bits, Both op codes are 2 bit, message is undefined length
+     // Recieved Message Format is [UUID|Server Op Code|Client Op Code|Message] UUID is 32 chars, Both op codes are 2 chars, message is undefined length
         // Example Message is [2bc7f400-c637-462b-b28c-83ce20e74692|00|00|Foulgaze]
         int delimeter = msg.find_first_of("|");
         string uuid = msg.substr(0,delimeter);
@@ -71,7 +72,7 @@ void parseCommand(serverManager &serverManager, string msg, int clientSocket)
                 string newUser = msg;
                 while(!serverManager.checkForUsername(newUser,clientSocket,uuid)) // Adds to username until it is unique
                 {
-                    newUser += " (1) ";
+                    newUser += "(1)";
                 }
                 send_message(uuid ,clientOpCode, newUser,clientList); // 00 For new name
 
@@ -164,15 +165,25 @@ int get_connection_data(int clientSocket,serverManager &serverManager, string &m
     parseBuffer(serverManager,messageBuffer, clientSocket);
     
     return 0;
-        
+}
 
-    
+int update_new_client(int socket)
+{
+    return 0;
+    cout << "Updating new client" << endl;
+    for(int i = 0; i < messageLog.size(); ++i)
+    {
+        string retMessage = messageLog[i];
+        byte retMsg[retMessage.length()];
+        memcpy(retMsg, retMessage.data(), retMessage.length());
+        send(socket,retMsg,retMessage.length(),0);
+    }
 }
 
 int main(int argc, char*argv[])
 {
     string messageBuffer = "";
-    // Create a socket
+
     int listening = socket(AF_INET, SOCK_STREAM, 0); //, Creates a TCP socket for IPV_4
     if(listening == -1) // A socket couldn't be created
     {
@@ -183,7 +194,7 @@ int main(int argc, char*argv[])
     // Bind the socket to a IP / port
     sockaddr_in hint;
     hint.sin_family = AF_INET; // Set socketaddr_in to IPV_4
-    hint.sin_port = htons(54000); //translation for big/little endians. Set socketport to 54000
+    hint.sin_port = htons(LISTENING_PORT); //translation for big/little endians. Set socketport to 54000
     inet_pton(AF_INET, "0.0.0.0", &hint.sin_addr);
 
     if( bind(listening, (sockaddr*)&hint, sizeof(hint)) == -1)
@@ -208,7 +219,7 @@ int main(int argc, char*argv[])
 
     vector<int> connectedFDPorts;
     serverManager serverManager;
-
+    cout << "Listening on " << LISTENING_PORT << endl;
     while(true)
     {
         readfds = readMaster;
@@ -225,6 +236,7 @@ int main(int argc, char*argv[])
                 {
                     int client = accept_new_connection(listening);
                     serverManager.addMember("","",client);
+                    update_new_client(client);
                     FD_SET(client,&readMaster);
                 }
                 else // One of the clients is sending data, process and then clear the fd
